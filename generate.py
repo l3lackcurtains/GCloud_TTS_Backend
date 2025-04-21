@@ -6,31 +6,38 @@ from concurrent.futures import ThreadPoolExecutor
 
 class TextToSpeechGenerator:
     AVAILABLE_VOICES = [
-        "Aoede",
-        "Charon",
-        "Fenrir",
-        "Kore",
-        "Leda",
-        "Orus",
-        "Puck",
-        "Zephyr"
+        "Aoede", "Charon", "Fenrir", "Kore",
+        "Leda", "Orus", "Puck", "Zephyr"
     ]
+    LANGUAGE_CODE = "en-US"
+    VOICE_MODEL = "en-US-Chirp3-HD"
+    DEFAULT_VOICE = "Kore"
 
-    def __init__(self):
+    def __init__(self, max_workers: int = 10):
         self.client = texttospeech.TextToSpeechClient()
-        self.executor = ThreadPoolExecutor(max_workers=10)  # Adjust based on your needs
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
 
     def get_available_voices(self) -> List[str]:
-        return self.AVAILABLE_VOICES
+        return self.AVAILABLE_VOICES.copy()
 
-    async def generate(self, text: str, name: str = "Kore") -> Tuple[bytes, float]:
-        if name not in self.AVAILABLE_VOICES:
-            raise ValueError(f"Invalid voice name. Must be one of: {', '.join(self.AVAILABLE_VOICES)}")
+    async def generate(self, text: str, name: str = DEFAULT_VOICE) -> Tuple[bytes, float]:
+        """Generate speech from text using specified voice.
+
+        Args:
+            text: The text to convert to speech
+            name: Voice name to use (must be one of AVAILABLE_VOICES)
+
+        Returns:
+            Tuple of (audio_content_bytes, generation_time_in_seconds)
+
+        Raises:
+            ValueError: If voice name is invalid
+        """
+        self._validate_voice_name(name)
         
         start_time = time.time()
-        
-        # Run the API call in a thread pool to prevent blocking
         loop = asyncio.get_running_loop()
+        
         response = await loop.run_in_executor(
             self.executor,
             self._synthesize_speech,
@@ -38,39 +45,26 @@ class TextToSpeechGenerator:
             name
         )
         
-        generation_time = time.time() - start_time
-        
-        return response.audio_content, generation_time
+        return response.audio_content, time.time() - start_time
 
-    def _synthesize_speech(self, text: str, name: str):
+    def _validate_voice_name(self, name: str) -> None:
+        if name not in self.AVAILABLE_VOICES:
+            raise ValueError(
+                f"Invalid voice name. Must be one of: {', '.join(self.AVAILABLE_VOICES)}"
+            )
+
+    def _synthesize_speech(self, text: str, name: str) -> texttospeech.SynthesizeSpeechResponse:
         synthesis_input = texttospeech.SynthesisInput(text=text)
         voice = texttospeech.VoiceSelectionParams(
-            name=f"en-US-Chirp3-HD-{name}",
-            language_code="en-US"
+            name=f"{self.VOICE_MODEL}-{name}",
+            language_code=self.LANGUAGE_CODE
         )
-
         audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3
         )
 
         return self.client.synthesize_speech(
-            input=synthesis_input, voice=voice, audio_config=audio_config
+            input=synthesis_input,
+            voice=voice,
+            audio_config=audio_config
         )
-
-def main():
-    # Example text to convert to speech
-    text = """
-    Hello! This is a test of the Google Cloud Text-to-Speech API 
-    using Media Studio voices. You can customize this text as needed.
-    """
-    
-    # Output file name
-    output_file = "output.mp3"
-    
-    try:
-        synthesize_media_studio_voice(text, output_file)
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-
-if __name__ == "__main__":
-    main()
