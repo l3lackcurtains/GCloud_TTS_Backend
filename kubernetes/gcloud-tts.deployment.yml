@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gcloud-tts-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gcloud-tts
+  template:
+    metadata:
+      labels:
+        app: gcloud-tts
+    spec:
+      containers:
+        - name: gcloud-tts
+          image: gcr.io/citric-lead-450721-v2/gcloud-tts:1.0.0
+          ports:
+            - containerPort: 8989  # FastAPI port from Dockerfile and main.py
+          env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/app/credentials.json"
+            - name: GOOGLE_CLOUD_PROJECT
+              value: "citric-lead-450721-v2"
+          resources:
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /voices
+              port: 8989
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /voices
+              port: 8989
+            initialDelaySeconds: 15
+            periodSeconds: 15
+      volumes:
+        - name: google-cloud-credentials
+          secret:
+            secretName: google-cloud-credentials
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gcloud-tts-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: gcloud-tts
+  ports:
+    - name: api
+      port: 8989
+      targetPort: 8989
