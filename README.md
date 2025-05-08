@@ -4,12 +4,12 @@
 docker login gcr.io
 
 # Build the image
-docker build -t gcloud-tts .
+docker build -t silk-vertex .
 # Tag the image
-docker tag gcloud-tts gcr.io/citric-lead-450721-v2/gcloud-tts:1.0.0
+docker tag silk-vertex gcr.io/citric-lead-450721-v2/silk-vertex:1.0.0
 
 # Push the image to GCR
-docker push gcr.io/citric-lead-450721-v2/gcloud-tts:1.0.0
+docker push gcr.io/citric-lead-450721-v2/silk-vertex:1.0.0
 
 
 ```
