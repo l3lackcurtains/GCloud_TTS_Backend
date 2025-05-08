@@ -66,6 +66,11 @@ def create_app() -> FastAPI:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
+    @app.get("/healthz")
+    async def health_check():
+        """Health check endpoint."""
+        return {"status": "ok"}
+
     return app
 
 app = create_app()
